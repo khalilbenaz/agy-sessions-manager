@@ -724,6 +724,8 @@ async function loadHistory() {
   const dirs = [...new Set([...sessions.values()].map(s => s.cwd).concat(historyCache.map(h => h.cwd)).filter(Boolean))];
   $('#dirs').innerHTML = '';
   for (const d of dirs.slice(0, 60)) { const o = document.createElement('option'); o.value = d; $('#dirs').appendChild(o); }
+}
+
 let templates = [];
 async function saveSessionAsTemplate(id) {
   const s = sessions.get(id); if (!s) return;
