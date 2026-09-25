@@ -382,6 +382,14 @@ function pickFolder(initial) {
   return picking;
 }
 
+function externalSessions() {
+  return [];
+}
+
+async function importExternal(pid, sessionId, mode) {
+  throw new Error('Import non supporté');
+}
+
 // ---------------------------------------------------------------- HTTP
 const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.png': 'image/png' };
 const STATIC = {
@@ -551,6 +559,16 @@ const server = http.createServer(async (req, res) => {
         const lk = ctx.lockedByConversation?.(h.id);
         return lk ? { ...h, managed: true, locked: true, title: `🔒 ${lk.name}`, lastPrompt: '' } : { ...h, managed: managed.has(h.id) };
       }));
+    }
+    if (p === '/api/external' && req.method === 'GET') return json(res, 200, externalSessions());
+    if (p === '/api/import' && req.method === 'POST') {
+      const { items, mode } = await readBody(req);
+      const done = [], errors = [];
+      for (const it of items || []) {
+        try { done.push(publicView(await importExternal(Number(it.pid), String(it.sessionId), mode))); }
+        catch (e) { errors.push(`${it.title || it.sessionId}: ${e.message}`); }
+      }
+      return json(res, 200, { done, errors });
     }
     if (p === '/api/pick-folder' && req.method === 'POST') {
       const { initial } = await readBody(req);

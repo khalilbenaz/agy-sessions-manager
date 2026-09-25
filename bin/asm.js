@@ -204,6 +204,9 @@ function openWindow() {
     }
     spawn('cmd.exe', ['/c', 'start', '', URL_], { detached: true, stdio: 'ignore', windowsHide: true }).unref();
   } else if (IS_MAC) {
+    if (exists('/Applications/AGY Sessions.app')) {
+      spawn('open', ['-a', '/Applications/AGY Sessions.app'], { detached: true, stdio: 'ignore' }).unref(); return;
+    }
     for (const app of ['Google Chrome', 'Microsoft Edge', 'Brave Browser', 'Chromium', 'Vivaldi']) {
       if (exists(`/Applications/${app}.app`) || exists(path.join(os.homedir(), 'Applications', `${app}.app`))) {
         spawn('open', ['-na', app, '--args', ...appArgs], { detached: true, stdio: 'ignore' }).unref(); return;

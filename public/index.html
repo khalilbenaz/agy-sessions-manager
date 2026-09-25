@@ -380,45 +380,45 @@
   </form>
 </dialog>
 
-<dialog id="dlgUnlock">
+<div id="ctx" class="ctx" popover="manual"></div>
+
+<dialog id="dlgImport">
   <form method="dialog">
-    <h2>Session verrouillée 🔒</h2>
-    <p id="ukName" class="hint"></p>
-    <p id="ukHint" class="hint" hidden>Indice : <b></b></p>
-    <label>Mot de passe <input type="password" id="ukPwd" autocomplete="current-password" autofocus></label>
-    <p id="ukErr" class="err"></p>
-    <menu>
-      <button value="cancel" formnovalidate>Annuler</button>
-      <button value="ok" class="primary">Déverrouiller</button>
-    </menu>
+    <h2 id="impTitle">Ramener dans asm</h2>
+    <p class="impInfo">Votre conversation n'est <b>pas perdue</b> : elle reprend dans asm exactement là où elle en est (historique, contexte, dossier).</p>
+    <div class="impChoices">
+      <button value="move" class="primary choice">
+        <b>Déplacer</b>
+        <span>La session passe dans asm. Dans le terminal, agy s'arrête : vous pouvez fermer cet onglet.</span>
+      </button>
+      <button value="copy" class="choice">
+        <b>Copier</b>
+        <span>Le terminal continue normalement. asm ouvre une copie de la conversation, qui évolue ensuite séparément.</span>
+      </button>
+    </div>
+    <p id="impWarn" class="impWarn" hidden></p>
+    <menu><button value="cancel">Annuler</button></menu>
   </form>
 </dialog>
 
 <dialog id="dlgHistory" class="wide">
   <div class="histHead">
-    <h2>Historique des conversations</h2>
-    <input id="histSearch" placeholder="Rechercher par prompt, dossier, branche…" autocomplete="off">
+    <h2>Historique</h2>
+    <input id="histSearch" placeholder="Filtrer (titre, dossier, prompt)…" autocomplete="off">
     <button id="histClose" class="icon">✕</button>
   </div>
-  <ul id="histList" class="results"></ul>
+  <ul id="histList"></ul>
 </dialog>
 
-<div id="dropOverlay" class="dropOverlay" hidden>
-  <div class="dropBox">
-    <span class="dropIcon">📁</span>
-    <p>Déposer les fichiers ou images ici</p>
-  </div>
-</div>
-
+<script src="i18n.js"></script>
 <script src="xterm.js"></script>
 <script src="addon-fit.js"></script>
 <script src="addon-web-links.js"></script>
 <script src="addon-webgl.js"></script>
-<script src="i18n.js"></script>
+<script src="app.js"></script>
+<script src="panel.js"></script>
 <script src="settings.js"></script>
 <script src="palette.js"></script>
 <script src="lock.js"></script>
-<script src="panel.js"></script>
-<script src="app.js"></script>
 </body>
 </html>
