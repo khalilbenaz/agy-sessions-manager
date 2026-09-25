@@ -4,7 +4,7 @@
 // macOS : Squirrel.Mac exige une app signée par Apple → simple vérification + lien vers la release.
 const { app, net, shell, Notification } = require('electron');
 
-const REPO = 'khalilbenaz/claude-sessions-manager';
+const REPO = 'khalilbenaz/agy-sessions-manager';
 const EVERY = 6 * 3600e3;
 
 function newer(a, b) { // a > b ?

@@ -98,7 +98,7 @@ function writeCustomTitle(id, title) {
   } catch { return false; }
 }
 
-const EXTRA_FIELDS = ['group', 'pinned', 'color', 'worktree', 'queue', 'alerts', 'remote', 'model', 'mode', 'effort'];
+const EXTRA_FIELDS = ['group', 'pinned', 'color', 'worktree', 'queue', 'alerts', 'model', 'mode', 'effort'];
 const extra = s => Object.fromEntries(EXTRA_FIELDS.filter(k => s[k] !== undefined).map(k => [k, s[k]]));
 
 function persist() {
@@ -157,7 +157,6 @@ function spawnSession(s, { resume } = {}) {
     if (s.mode === 'accept-edits' || s.mode === 'plan') args.push('--mode', s.mode);
     else if (s.mode === 'dangerously-skip-permissions') args.push('--dangerously-skip-permissions');
   }
-  args.push(...(ctx.remoteArgs?.(s) || []));
   args.push(...splitArgs(s.args));
 
   const env = {
@@ -660,7 +659,7 @@ const ctx = {
   route, on, emit, json, readBody, sessions, publicView, persist, broadcast, createSession, killSession, spawnSession,
   renameSession, history, transcriptPath, setStatus, DATA, ROOT, PORT, VERSION, AGY, IS_WIN, IS_MAC, TOKEN_FILE,
 };
-for (const mod of ['lock', 'git', 'settings', 'usage', 'tools', 'queue', 'remote']) {
+for (const mod of ['lock', 'git', 'settings', 'usage', 'tools', 'queue']) {
   try { require(`./lib/${mod}`)(ctx); } catch (e) { console.error(`module ${mod} :`, e); }
 }
 

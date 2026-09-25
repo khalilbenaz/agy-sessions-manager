@@ -19,7 +19,7 @@ Une seule fenêtre pour piloter plusieurs sessions [Antigravity CLI](https://git
 11. [Palette, recherche, prompts, file d'attente, envoi groupé](#11-palette-recherche-prompts-file-dattente-envoi-groupé)
 12. [Modèles de session](#12-modèles-de-session)
 13. [Verrouiller une session par mot de passe](#13-verrouiller-une-session-par-mot-de-passe)
-14. [Notifications, zone de notification, arrière-plan](#14-notifications-zone-de-notification-arrière-plan) — et [accès distant](#14-bis-accès-distant)
+14. [Notifications, zone de notification, arrière-plan](#14-notifications-zone-de-notification-arrière-plan)
 15. [Thème clair / sombre, langue](#15-thème-clair--sombre-langue)
 16. [Réglages](#16-réglages)
 17. [Mises à jour](#17-mises-à-jour)
@@ -197,12 +197,6 @@ Pour masquer une session sensible (écran partagé, démonstration en direct, po
 - **Zone de notification** (Windows, près de l'horloge) / **barre de menus** (macOS) : **réduire ou fermer la fenêtre l'y envoie**, les sessions continuent. Clic sur l'icône = afficher / masquer ; **clic droit** = la **liste des sessions et leur état** (🟠 travaille, 🔴 attend, 🟢 prête ; clic pour y aller), nouvelle session, historique, réglages, lancer au démarrage, redémarrer le serveur, quitter. Un **point rouge** sur l'icône signale une session qui t'attend.
 - **Quitter** : « Quitter (les sessions continuent) » ferme l'app ; « Quitter et arrêter toutes les sessions » arrête aussi le serveur (elles reviendront au prochain lancement).
 - **Lancement au démarrage** de l'ordinateur : configurable et géré par LaunchAgent sur macOS et le Planificateur de tâches sur Windows.
-
-### 14 bis. Accès distant
-
-Le serveur AGY Sessions écoute par défaut sur l'interface locale `127.0.0.1:7892` avec protection anti-CSRF par jeton aléatoire. Pour piloter vos sessions depuis un autre appareil (ordinateur portable, tablette, téléphone) :
-- Vous pouvez créer un tunnel chiffré sécurisé (via SSH, Tailscale ou Cloudflare Tunnel) pointant vers le port `7892`.
-- L'interface web complète et réactive s'adapte aux écrans mobiles pour suivre l'avancement, répondre aux questions d'Antigravity et consulter l'historique en temps réel.
 
 ## 15. Thème clair / sombre, langue
 

@@ -1,6 +1,6 @@
 {
   "name": "agy-sessions-manager",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Une fenêtre pour piloter plusieurs sessions Antigravity CLI (agy) : sessions persistantes, état en direct, historique, reprise automatique.",
   "bin": {
     "asm": "bin/asm.js",

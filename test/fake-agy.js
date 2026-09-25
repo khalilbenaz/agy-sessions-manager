@@ -52,7 +52,6 @@ async function prompt(text) {
 
 (async () => {
   await hook('SessionStart', { source: resume ? 'resume' : 'startup' });
-  if (argv.includes('--remote-control')) out(`REMOTE:1\r\n`);
   out(`FAUX AGY prêt ${resume ? '(reprise ' + resume.slice(0, 8) + ')' : ''} — session ${sessionId}\r\n❯ `);
 
   let buf = '';
