@@ -149,15 +149,78 @@ function renameSession(s, name) {
 }
 
 function spawnSession(s, { resume } = {}) {
-  const args = [...splitArgs(process.env.ASM_AGY_ARGS || '')];
-  if (resume) args.push('--conversation', resume);
-  if (s.model && !args.includes('--model')) args.push('--model', s.model);
-  if (s.effort && !args.includes('--effort')) args.push('--effort', s.effort);
-  if (s.mode && !args.includes('--mode')) {
-    if (s.mode === 'accept-edits' || s.mode === 'plan') args.push('--mode', s.mode);
-    else if (s.mode === 'dangerously-skip-permissions') args.push('--dangerously-skip-permissions');
+  const rawArgs = [...splitArgs(process.env.ASM_AGY_ARGS || '')];
+  if (resume) rawArgs.push('--conversation', resume);
+
+  // Extract model, effort, mode from s.args or s.model/s.effort/s.mode
+  let explicitModel = s.model || '';
+  let explicitEffort = s.effort || '';
+  let explicitMode = s.mode || '';
+  const extraArgs = [];
+
+  const splitUserArgs = splitArgs(s.args || '');
+  for (let i = 0; i < splitUserArgs.length; i++) {
+    const a = splitUserArgs[i];
+    if (a === '--model' && i + 1 < splitUserArgs.length) {
+      explicitModel = splitUserArgs[++i];
+    } else if (a.startsWith('--model=')) {
+      explicitModel = a.slice(8);
+    } else if (a === '--effort' && i + 1 < splitUserArgs.length) {
+      explicitEffort = splitUserArgs[++i];
+    } else if (a.startsWith('--effort=')) {
+      explicitEffort = a.slice(9);
+    } else if (a === '--mode' && i + 1 < splitUserArgs.length) {
+      explicitMode = splitUserArgs[++i];
+    } else if (a.startsWith('--mode=')) {
+      explicitMode = a.slice(7);
+    } else if (a === '--dangerously-skip-permissions') {
+      explicitMode = 'dangerously-skip-permissions';
+    } else {
+      extraArgs.push(a);
+    }
   }
-  args.push(...splitArgs(s.args));
+
+  // Normalize model & effort to ensure 100% compatibility with agy CLI
+  let m = String(explicitModel || '').trim();
+  let eff = String(explicitEffort || '').trim();
+
+  // Strip legacy suffixes like -high, -medium, -low
+  const mMatch = m.match(/^(gemini-\d+\.\d+-(?:flash|pro))-(high|medium|low)$/);
+  if (mMatch) {
+    m = mMatch[1];
+    if (!eff) eff = mMatch[2];
+  }
+
+  const args = [...rawArgs];
+  if (m.startsWith('claude-')) {
+    args.push('--model', m);
+    // Claude does not support --effort in agy CLI
+  } else if (m.startsWith('gpt-oss')) {
+    args.push('--model', 'gpt-oss-120b-medium');
+  } else if (m === 'gemini-3.1-pro') {
+    args.push('--model', m);
+    if (eff !== 'low' && eff !== 'high') eff = 'high';
+    args.push('--effort', eff);
+  } else if (m.startsWith('gemini-')) {
+    args.push('--model', m);
+    if (!eff || (eff !== 'low' && eff !== 'medium' && eff !== 'high')) eff = 'medium';
+    args.push('--effort', eff);
+  } else if (m) {
+    args.push('--model', m);
+    if (eff && ['low', 'medium', 'high'].includes(eff)) args.push('--effort', eff);
+  } else if (eff) {
+    if (['low', 'medium', 'high'].includes(eff)) args.push('--effort', eff);
+  }
+
+  if (explicitMode === 'accept-edits' || explicitMode === 'plan') {
+    args.push('--mode', explicitMode);
+  } else if (explicitMode === 'dangerously-skip-permissions') {
+    args.push('--dangerously-skip-permissions');
+  } else if (explicitMode) {
+    args.push('--mode', explicitMode);
+  }
+
+  args.push(...extraArgs);
 
   const env = {
     ...process.env,
@@ -659,7 +722,7 @@ const ctx = {
   route, on, emit, json, readBody, sessions, publicView, persist, broadcast, createSession, killSession, spawnSession,
   renameSession, history, transcriptPath, setStatus, DATA, ROOT, PORT, VERSION, AGY, IS_WIN, IS_MAC, TOKEN_FILE,
 };
-for (const mod of ['lock', 'git', 'settings', 'usage', 'tools', 'queue']) {
+for (const mod of ['lock', 'git', 'settings', 'usage', 'tools', 'queue', 'agy-cli']) {
   try { require(`./lib/${mod}`)(ctx); } catch (e) { console.error(`module ${mod} :`, e); }
 }
 

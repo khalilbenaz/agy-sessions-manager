@@ -19,6 +19,7 @@ const HELP = `asm ${PKG.version} — AGY Sessions Manager
   asm install      démarrage automatique à l'ouverture de session + raccourci
                    (Windows : tâche planifiée + menu Démarrer ; macOS : LaunchAgent + ~/Applications)
   asm uninstall    retire le démarrage automatique et le raccourci (les données sont gardées)
+  asm update-agy   recherche et installe la mise à jour d'Antigravity CLI (agy update)
   asm stop         arrête le serveur (les sessions ouvertes reviendront au prochain démarrage)
   asm restart | status | log | where
 
@@ -231,10 +232,25 @@ const COMMANDS = {
   },
   where() { console.log(`code    : ${ROOT}\ndonnées : ${DATA}\nnode    : ${NODE}`); },
   async install() {
+    try {
+      const { getAgyVersion, installAgy } = require('../lib/agy-cli');
+      const curAgy = await getAgyVersion();
+      if (!curAgy) {
+        console.log('Antigravity CLI (agy) non détecté : installation automatique en cours...');
+        try { await installAgy(console.log); }
+        catch (e) { console.warn(`Avertissement agy : ${e.message}`); }
+      } else {
+        console.log(`✓ Antigravity CLI détecté (v${curAgy})`);
+      }
+    } catch { }
     if (IS_WIN) winInstall(); else if (IS_MAC) macInstall();
     else throw new Error('démarrage automatique : Windows et macOS seulement (utiliser « asm start »)');
     await start();
-    console.log(`\nserveur prêt : ${URL_}\nOuvrir : « ${APP_NAME} » ${IS_WIN ? 'dans le menu Démarrer' : 'dans Spotlight / ~/Applications'}, ou « asm ».`);
+    console.log(`\nserveur prêt : ${URL_}\nOuvrir : « ${APP_NAME} » ${IS_WIN ? 'dans le menu Démarrer' : 'dans Spotlight / Applications'}, ou « asm ».`);
+  },
+  async 'update-agy'() {
+    const { updateAgy } = require('../lib/agy-cli');
+    await updateAgy(console.log);
   },
   uninstall() { if (IS_WIN) winUninstall(); else if (IS_MAC) macUninstall(); },
   help() { console.log(HELP); },

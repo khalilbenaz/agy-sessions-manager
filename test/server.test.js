@@ -112,3 +112,22 @@ test('file d’attente : prompts envoyés séquentiellement', async () => {
   assert.equal((await session(S.id)).queue, undefined);
   c.ws.close();
 });
+
+test('harmonisation des modèles et de l’effort sans conflit', async () => {
+  const s1 = await api('POST', '/api/sessions', {
+    cwd: WORK,
+    name: 'conflict-test',
+    args: '--model gemini-3.8-flash-high --effort medium'
+  });
+  const ses1 = await idle(s1.id);
+  assert.ok(ses1.id, 'session démarrée sans crash');
+
+  const s2 = await api('POST', '/api/sessions', {
+    cwd: WORK,
+    name: 'claude-test',
+    model: 'claude-sonnet-4-6',
+    effort: 'medium'
+  });
+  const ses2 = await idle(s2.id);
+  assert.ok(ses2.id, 'session claude démarrée sans crash');
+});

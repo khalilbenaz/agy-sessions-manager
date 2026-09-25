@@ -13,7 +13,7 @@ let historyCache = [];
 const STATUS_LABEL = { starting: t('démarrage'), working: t('travaille'), attention: t('attend une réponse'), idle: t('prêt'), exited: t('arrêtée') };
 
 // Réglages (serveur) : voir lib/settings.js. Valeurs par défaut en attendant la réponse.
-let SETTINGS = { theme: 'system', fontSize: 14, fontFamily: '', defaultModel: 'opus', defaultMode: '', notifications: true, sound: 'soft', dnd: false, waitingMinutes: 10, longRunMinutes: 0, worktreeDefault: false, compactSidebar: false, autoUpdate: true, onboarded: true };
+let SETTINGS = { theme: 'system', fontSize: 14, fontFamily: '', defaultModel: 'gemini-3.8-flash', defaultMode: '', defaultEffort: 'medium', notifications: true, sound: 'soft', dnd: false, waitingMinutes: 10, longRunMinutes: 0, worktreeDefault: false, compactSidebar: false, autoUpdate: true, onboarded: true };
 const THEMES = {
   dark: { background: '#101114', foreground: '#e6e6e6', cursor: '#d97757', selectionBackground: '#3a4150' },
   light: { background: '#fbfaf8', foreground: '#1f1b18', cursor: '#c4613f', selectionBackground: '#d9d2c7', black: '#1f1b18', brightBlack: '#6b6560', white: '#8b8580', brightWhite: '#1f1b18', yellow: '#9a6b00', brightYellow: '#8a5a00', green: '#1f7a3f', brightGreen: '#1a6b36', cyan: '#0e6f86', brightCyan: '#0b5f73', blue: '#1f5fbf', brightBlue: '#1a4fa0', magenta: '#8a3fa0', brightMagenta: '#7a2f90', red: '#c0392b', brightRed: '#a93226' },
@@ -742,15 +742,51 @@ async function saveSessionAsTemplate(id) {
   list.push({ name, cwd: s.worktree ? s.worktree.repo : s.cwd, model, mode, extra: extra.join(' '), worktree: !!s.worktree, prompt: '', group: s.group || '' });
   try { await api('PUT', '/api/templates', list); toast(`${t('Modèle enregistré')} : ${name}`); } catch (e) { toast(e.message, true); }
 }
+function syncEffortOptions(modelVal, effortSelect, effortRow) {
+  if (!effortSelect) return;
+  const currentVal = effortSelect.value;
+  const m = String(modelVal || '').trim();
+
+  if (m.startsWith('claude-')) {
+    effortSelect.innerHTML = `<option value="">Non applicable (inclus)</option>`;
+    effortSelect.disabled = true;
+    if (effortRow) effortRow.style.opacity = '0.5';
+  } else if (m.startsWith('gpt-oss')) {
+    effortSelect.innerHTML = `<option value="medium">Moyen (medium)</option>`;
+    effortSelect.disabled = true;
+    if (effortRow) effortRow.style.opacity = '0.5';
+  } else if (m === 'gemini-3.1-pro') {
+    effortSelect.disabled = false;
+    effortSelect.innerHTML = `
+      <option value="high">Élevé (high)</option>
+      <option value="low">Faible (low)</option>
+    `;
+    effortSelect.value = (currentVal === 'low') ? 'low' : 'high';
+    if (effortRow) effortRow.style.opacity = '1';
+  } else {
+    // gemini-3.8-flash, gemini-3.7-flash, etc. or default
+    effortSelect.disabled = false;
+    effortSelect.innerHTML = `
+      <option value="medium">Moyen (medium)</option>
+      <option value="high">Élevé (high)</option>
+      <option value="low">Faible (low)</option>
+    `;
+    effortSelect.value = (currentVal === 'low' || currentVal === 'high') ? currentVal : 'medium';
+    if (effortRow) effortRow.style.opacity = '1';
+  }
+}
+window.syncEffortOptions = syncEffortOptions;
+
 async function loadTemplates() { try { templates = await api('GET', '/api/templates'); } catch { templates = []; } return templates; }
 window.addEventListener('csm:templates', e => { templates = e.detail; });
 function openNew(tpl) {
   if (tpl && !tpl.id) tpl = null; // seul un vrai modèle (avec id) préremplit le formulaire
   const f = $('#formNew');
   f.reset();
-  f.model.value = SETTINGS.defaultModel ?? 'gemini-3.8-flash-high';
+  f.model.value = SETTINGS.defaultModel ?? 'gemini-3.8-flash';
+  syncEffortOptions(f.model.value, f.effort, $('#lblEffort'));
   f.mode.value = SETTINGS.defaultMode || '';
-  if (f.effort) f.effort.value = SETTINGS.defaultEffort || 'medium';
+  if (f.effort && SETTINGS.defaultEffort && !f.effort.disabled) f.effort.value = SETTINGS.defaultEffort;
   const cur = sessions.get(active);
   f.cwd.value = LS.get('csm.lastCwd', '') || (cur?.worktree ? cur.worktree.repo : cur?.cwd) || '';
   f.group.value = cur?.group || '';
@@ -771,13 +807,16 @@ function applyTemplate(x) {
   if (!x) return;
   if (x.cwd) f.cwd.value = x.cwd;
   f.name.value = x.name || '';
-  f.model.value = x.model ?? f.model.value; f.mode.value = x.mode || '';
-  if (x.effort && f.effort) f.effort.value = x.effort;
+  f.model.value = x.model ?? f.model.value;
+  syncEffortOptions(f.model.value, f.effort, $('#lblEffort'));
+  f.mode.value = x.mode || '';
+  if (x.effort && f.effort && !f.effort.disabled) f.effort.value = x.effort;
   f.extra.value = x.extra || ''; f.prompt.value = x.prompt || ''; f.group.value = x.group || '';
   f.worktree.checked = !!x.worktree;
   if (x.prompt) f.querySelector('details').open = true;
   checkRepo();
 }
+$('#formNew').model.onchange = e => syncEffortOptions(e.target.value, $('#formNew').effort, $('#lblEffort'));
 $('#formNew').template.onchange = e => applyTemplate(templates.find(x => x.id === e.target.value));
 // Worktree : proposé seulement dans un dépôt git ; nom de branche suggéré depuis le nom de la session.
 let repoTimer = null;
@@ -825,10 +864,12 @@ $('#btnBrowse').onclick = async () => {
 $('#dlgNew').addEventListener('close', async () => {
   if ($('#dlgNew').returnValue !== 'ok') return;
   const f = $('#formNew');
+  const m = f.model.value.trim();
+  const eff = f.effort && !f.effort.disabled ? f.effort.value.trim() : '';
   const args = [
-    f.model.value && `--model ${f.model.value}`,
+    m && `--model ${m}`,
+    eff && `--effort ${eff}`,
     f.mode.value && (f.mode.value === 'accept-edits' || f.mode.value === 'plan' ? `--mode ${f.mode.value}` : f.mode.value === 'dangerously-skip-permissions' ? '--dangerously-skip-permissions' : `--mode ${f.mode.value}`),
-    f.effort?.value && `--effort ${f.effort.value}`,
     f.extra.value.trim()
   ].filter(Boolean).join(' ');
   const cwd = f.cwd.value.trim().replace(/^"|"$/g, '');
@@ -1015,22 +1056,22 @@ window.csmNative?.onAction(a => {
 window.csmFeatures = {}; // rempli par panel.js, settings.js, palette.js
 loadSettings().finally(() => { connect(); setLayout(layout); window.dispatchEvent(new Event('csm:ready')); document.documentElement.dataset.ready = '1'; }); // réglages et langue définitifs (repère pour les tests)
 
-// ------------------------------------------------------------------ version du serveur
-// Le serveur survit aux mises à jour de l'app : s'il tourne un ancien code, les nouvelles routes manquent.
-const UI_VERSION = document.querySelector('meta[name="csm-version"]')?.content || '';
+const UI_VERSION = document.querySelector('meta[name="asm-version"]')?.content || document.querySelector('meta[name="csm-version"]')?.content || '';
 async function checkServerVersion() {
   let server = '';
-  try { server = (await api('GET', '/api/version')).version; } catch { server = ''; } // ancienne version : route absente
-  const expected = window.csmNative?.appVersion?.() || UI_VERSION;
+  try { server = (await api('GET', '/api/version')).version; } catch { server = ''; }
+  const native = window.asmNative || window.csmNative;
+  const expected = native?.appVersion?.() || UI_VERSION;
   const stale = !server || (expected && server !== expected);
   $('#stale').hidden = !stale;
   if (!stale) return;
   $('#staleMsg').textContent = `Le serveur tourne ${server ? 'la version ' + server : 'une ancienne version'}${expected ? ' (application : ' + expected + ')' : ''} : certaines fonctions ne marchent pas. Redémarrer le relance avec le bon code ; les sessions ouvertes reviennent toutes seules.`;
-  $('#btnStale').hidden = !window.csmNative?.restartServer;
-  if (!window.csmNative) $('#staleMsg').textContent += ' Commande : csm restart';
+  $('#btnStale').hidden = !native?.restartServer;
+  if (!native) $('#staleMsg').textContent += ' Commande : asm restart';
 }
 $('#btnStale').onclick = async () => {
   $('#btnStale').disabled = true; $('#btnStale').textContent = 'Redémarrage…';
-  const ok = await window.csmNative.restartServer();
+  const native = window.asmNative || window.csmNative;
+  const ok = await native?.restartServer?.();
   if (!ok) { $('#btnStale').disabled = false; $('#btnStale').textContent = 'Redémarrer le serveur'; toast('Le serveur ne redémarre pas — voir le journal', true); }
 };

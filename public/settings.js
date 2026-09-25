@@ -19,6 +19,11 @@
 
   // Champs data-set="clé" liés aux réglages du serveur, enregistrés à chaque changement.
   function fill() {
+    const effEl = dlg.querySelector('[data-set="defaultEffort"]');
+    const lblEff = $('#lblDefaultEffort');
+    if (window.syncEffortOptions) {
+      window.syncEffortOptions(SETTINGS.defaultModel, effEl, lblEff);
+    }
     dlg.querySelectorAll('[data-set]').forEach(el => {
       const v = SETTINGS[el.dataset.set];
       if (el.type === 'checkbox') el.checked = !!v; else el.value = v ?? '';
@@ -30,6 +35,16 @@
       const k = el.dataset.set;
       const v = el.type === 'checkbox' ? el.checked : el.type === 'number' ? Number(el.value) : el.value;
       saveSettings({ [k]: v });
+      if (k === 'defaultModel') {
+        const effEl = dlg.querySelector('[data-set="defaultEffort"]');
+        const lblEff = $('#lblDefaultEffort');
+        if (window.syncEffortOptions) {
+          window.syncEffortOptions(v, effEl, lblEff);
+          if (effEl && !effEl.disabled) {
+            saveSettings({ defaultEffort: effEl.value });
+          }
+        }
+      }
       if (k === 'editor') $('#editorCmdRow').hidden = v !== 'custom';
       if (k === 'fontSize') { LS.set('csm.font', v); for (const tt of terms.values()) tt.term.options.fontSize = v; fitAll(); }
       if (k === 'notifications' && v && 'Notification' in window) Notification.requestPermission();
@@ -127,7 +142,30 @@
     $('#aboutVersion').textContent = (window.asmNative || window.csmNative)?.appVersion?.() || document.querySelector('meta[name="asm-version"]')?.content || document.querySelector('meta[name="csm-version"]')?.content || '';
     $('#updateStatus').textContent = upd ? updText(upd) : ((window.asmNative || window.csmNative) ? '' : t('Dans le navigateur : mettre à jour avec git pull puis asm restart.'));
     $('#updateCheck').hidden = !(window.asmNative || window.csmNative)?.update;
+    checkAgy();
   }
+  async function checkAgy() {
+    try {
+      const s = await api('GET', '/api/agy/status');
+      const el = $('#agyCliVersion');
+      if (el) el.textContent = s.installed ? `v${s.version} (${s.path})` : t('non installé');
+    } catch { }
+  }
+  $('#btnUpdateAgy').onclick = async () => {
+    const btn = $('#btnUpdateAgy');
+    btn.disabled = true;
+    $('#agyUpdateStatus').textContent = t('Mise à jour d’Antigravity CLI en cours…');
+    try {
+      const res = await api('POST', '/api/agy/update');
+      $('#agyUpdateStatus').textContent = res.output ? res.output.trim() : t('À jour');
+      await checkAgy();
+      toast(t('Antigravity CLI vérifié/mis à jour'));
+    } catch (e) {
+      $('#agyUpdateStatus').textContent = `Échec : ${e.message}`;
+    } finally {
+      btn.disabled = false;
+    }
+  };
   function onUpdate(st) {
     upd = st;
     const bar = $('#updateBar');

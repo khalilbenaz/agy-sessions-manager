@@ -9,3 +9,14 @@ for (const dir of ['prebuilds/darwin-arm64', 'prebuilds/darwin-x64', 'build/Rele
   const f = path.join(base, dir, 'spawn-helper');
   try { fs.chmodSync(f, 0o755); } catch { }
 }
+
+// Vérification / installation automatique d'Antigravity CLI si absent
+try {
+  const { getAgyVersion, installAgy } = require('../lib/agy-cli');
+  getAgyVersion().then(v => {
+    if (!v) {
+      console.log('Antigravity CLI (agy) non détecté : installation automatique...');
+      installAgy(console.log).catch(() => {});
+    }
+  }).catch(() => {});
+} catch { }
